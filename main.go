@@ -78,8 +78,7 @@ func main() {
 		c.Data(resp.StatusCode, "application/json", body)
 	})
 
-	err := r.Run(":5000") // Run on port 5000
-	if err != nil {
+	if err := r.Run(":5000"); err != nil {
 		panic(err)
 	}
 }
