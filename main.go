@@ -16,7 +16,7 @@ type Peer struct {
 type PassThruRequest struct {
 	PeerID  string `json:"peer_id"`
 	URI     string `json:"uri"`
-	Payload string `json:"payload"`
+	Payload []byte `json:"payload"`
 }
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 			return
 		}
 
-		httpReq, err := http.NewRequest("POST", req.URI, bytes.NewBuffer([]byte(req.Payload)))
+		httpReq, err := http.NewRequest("POST", req.URI, bytes.NewBuffer(req.Payload))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error() + " 2"})
 			return
