@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -30,13 +31,15 @@ type PassThruMessage struct {
 }
 
 func main() {
-	backendURI := os.Getenv("BACKEND_URI")
-	if backendURI == "" {
-		log.Fatal("BACKEND_URI environment must be set")
+	var peers map[string]string = make(map[string]string)
+
+	for i := 1; i <= 4; i++ {
+		backendURI := os.Getenv("BACKEND_URI" + fmt.Sprint(i))
+		peers["hash"+fmt.Sprint(i)] = backendURI
 	}
 
 	port := os.Getenv("PORT")
-	if backendURI == "" {
+	if port == "" {
 		log.Fatal("PORT environment must be set")
 	}
 
@@ -62,13 +65,13 @@ func main() {
 			{
 				// BNM
 				Name:   "549300NROGNBV2T1GS07",
-				PeerID: "hash3",
+				PeerID: "hash4",
 			},
 		}
 		c.JSON(http.StatusOK, peers)
 	})
 
-	r.POST("/v1/p2p/passthru", func(c *gin.Context) {
+	r.POST("/passthrough", func(c *gin.Context) {
 		var req PassThruRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
@@ -87,7 +90,7 @@ func main() {
 			return
 		}
 
-		httpReq, err := http.NewRequest("POST", backendURI, bytes.NewBuffer(jsonpassThruMessage))
+		httpReq, err := http.NewRequest("POST", peers[req.PeerID], bytes.NewBuffer(jsonpassThruMessage))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to create http request " + err.Error()})
 			return
