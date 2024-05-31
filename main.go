@@ -35,6 +35,11 @@ func main() {
 		log.Fatal("BACKEND_URI environment must be set")
 	}
 
+	port := os.Getenv("PORT")
+	if backendURI == "" {
+		log.Fatal("PORT environment must be set")
+	}
+
 	r := gin.Default()
 
 	r.GET("/v1/p2p/peers", func(c *gin.Context) {
@@ -105,7 +110,7 @@ func main() {
 		c.Data(resp.StatusCode, "application/json", body)
 	})
 
-	if err := r.Run(":5000"); err != nil {
+	if err := r.Run(":" + port); err != nil {
 		panic(err)
 	}
 }
