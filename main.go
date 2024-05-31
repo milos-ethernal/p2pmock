@@ -17,16 +17,18 @@ type Peer struct {
 	PeerID string `json:"peer_id"`
 }
 
-type PassThruRequest struct {
+// client message
+type P2PClientMessage struct {
 	PeerID    string `json:"peer_id"`
 	MessageID int    `json:"message_id"`
-	Method    string `json:"uri"`
+	Method    string `json:"method"`
 	Payload   []byte `json:"payload"`
 }
 
-type PassThruMessage struct {
+// server message
+type P2PServerMessasge struct {
 	MessageID int    `json:"message_id"`
-	Method    string `json:"uri"`
+	Method    string `json:"method"`
 	Payload   []byte `json:"payload"`
 }
 
@@ -72,13 +74,13 @@ func main() {
 	})
 
 	r.POST("/passthrough", func(c *gin.Context) {
-		var req PassThruRequest
+		var req P2PClientMessage
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 			return
 		}
 
-		passThruMessage := PassThruMessage{
+		passThruMessage := P2PServerMessasge{
 			MessageID: req.MessageID,
 			Method:    req.Method,
 			Payload:   req.Payload,
@@ -96,21 +98,23 @@ func main() {
 			return
 		}
 
-		client := &http.Client{}
-		resp, err := client.Do(httpReq)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to send http request " + err.Error()})
-			return
-		}
-		defer resp.Body.Close()
+		go func() {
+			client := &http.Client{}
+			resp, err := client.Do(httpReq)
+			if err != nil {
+				fmt.Println("failed to send http request " + err.Error())
+				return
+			}
+			defer resp.Body.Close()
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to read response " + err.Error()})
-			return
-		}
+			_, err = io.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Println("failed to read response " + err.Error())
+				return
+			}
+		}()
 
-		c.Data(resp.StatusCode, "application/json", body)
+		c.Data(http.StatusOK, "application/json", []byte{})
 	})
 
 	if err := r.Run(":" + port); err != nil {
