@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,12 +17,24 @@ type Peer struct {
 }
 
 type PassThruRequest struct {
-	PeerID  string `json:"peer_id"`
-	URI     string `json:"uri"`
-	Payload []byte `json:"payload"`
+	PeerID    string `json:"peer_id"`
+	MessageID int    `json:"message_id"`
+	Method    string `json:"uri"`
+	Payload   []byte `json:"payload"`
+}
+
+type PassThruMessage struct {
+	MessageID int    `json:"message_id"`
+	Method    string `json:"uri"`
+	Payload   []byte `json:"payload"`
 }
 
 func main() {
+	backendURI := os.Getenv("BACKEND_URI")
+	if backendURI == "" {
+		log.Fatal("BACKEND_URI environment must be set")
+	}
+
 	r := gin.Default()
 
 	r.GET("/v1/p2p/peers", func(c *gin.Context) {
@@ -51,27 +66,39 @@ func main() {
 	r.POST("/v1/p2p/passthru", func(c *gin.Context) {
 		var req PassThruRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error() + " 1"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 			return
 		}
 
-		httpReq, err := http.NewRequest("POST", req.URI, bytes.NewBuffer(req.Payload))
+		passThruMessage := PassThruMessage{
+			MessageID: req.MessageID,
+			Method:    req.Method,
+			Payload:   req.Payload,
+		}
+
+		jsonpassThruMessage, err := json.Marshal(passThruMessage)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error() + " 2"})
+			c.JSON(http.StatusBadRequest, gin.H{"message": "failed to marshal pass thru message object " + err.Error()})
+			return
+		}
+
+		httpReq, err := http.NewRequest("POST", backendURI, bytes.NewBuffer(jsonpassThruMessage))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to create http request " + err.Error()})
 			return
 		}
 
 		client := &http.Client{}
 		resp, err := client.Do(httpReq)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error() + " 3"})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to send http request " + err.Error()})
 			return
 		}
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"message": err.Error() + " 4"})
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to read response " + err.Error()})
 			return
 		}
 
