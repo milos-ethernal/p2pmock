@@ -12,11 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Peer struct {
-	Name   string `json:"name"`
-	PeerID string `json:"peer_id"`
-}
-
 // client message
 type P2PClientMessage struct {
 	PeerID    string `json:"peer_id"`
@@ -47,29 +42,14 @@ func main() {
 
 	r := gin.Default()
 
-	r.GET("/v1/p2p/peers", func(c *gin.Context) {
-		peers := []Peer{
-			{
-				// JPM Chase
-				Name:   "984500653R409CC5AB28",
-				PeerID: "hash1",
-			},
-			{
-				// MAS
-				Name:   "54930035WQZLGC45RZ35",
-				PeerID: "hash2",
-			},
-			{
-				// HLB
-				Name:   "549300BUPYUQGB5BFX94",
-				PeerID: "hash3",
-			},
-			{
-				// BNM
-				Name:   "549300NROGNBV2T1GS07",
-				PeerID: "hash4",
-			},
+	r.GET("/peers", func(c *gin.Context) {
+		peers := map[string]string{
+			"984500653R409CC5AB28": "hash1",
+			"54930035WQZLGC45RZ35": "hash2",
+			"549300BUPYUQGB5BFX94": "hash3",
+			"549300NROGNBV2T1GS07": "hash4",
 		}
+
 		c.JSON(http.StatusOK, peers)
 	})
 
